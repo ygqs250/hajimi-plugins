@@ -16,7 +16,7 @@ namespace CustomItems.API.Equipment.Accessory
 
         public override string Name => "鹰眼";
 
-        public override string Description => "去除战争迷雾，你可以看得更远，并且获得眼镜效果";
+        public override string Description => "获得眼镜效果";
 
         Vector3 quipposition;
 
@@ -28,12 +28,12 @@ namespace CustomItems.API.Equipment.Accessory
         public override void EquipHander(Wanjia wj, System.Object extra = null)
         {
             wj.Owner.EnableEffect<CustomPlayerEffects.Scp1344>(50, 0, false);
-            wj.Owner.EnableEffect<CustomPlayerEffects.FogControl>(1, 0, false);
+            //wj.Owner.EnableEffect<CustomPlayerEffects.FogControl>(1, 0, false);
         }
         public override void RemoveHander(Wanjia wj, System.Object extra = null)
         {
             wj.Owner.DisableEffect<CustomPlayerEffects.Scp1344>();
-            wj.Owner.DisableEffect<CustomPlayerEffects.FogControl>();
+            //wj.Owner.DisableEffect<CustomPlayerEffects.FogControl>();
         }
     }
 }

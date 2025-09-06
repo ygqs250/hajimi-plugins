@@ -22,19 +22,29 @@ namespace CustomItems.API.Equipment.Accessory
 
         public override void EquipHander(Wanjia wj, System.Object extra = null)
         {
-            wj.CanUseMedical = false;
+            wj.CanUseMedical = 1024;
         }
         public override void RemoveHander(Wanjia wj, System.Object extra = null)
         {
-            wj.CanUseMedical = true;
+            wj.CanUseMedical = 0;
         }
         public override void EffectHander(Wanjia wj, System.Object extra = null)
         {
-            wj.CanUseMedical = false;
+            wj.CanUseMedical = 1024;
         }
         public override void OnRegistered()
         {
             抽奖机.AddLottery(new LotteryItem(this.Id, 1000));
+        }
+
+        public override void AttactHander(PlayerHurtingEventArgs ev, System.Object extra = null)
+        {
+            if (ev.Attacker == null) return;
+            if (ev.DamageHandler is StandardDamageHandler)
+            {
+                StandardDamageHandler st = ev.DamageHandler as StandardDamageHandler;
+                st.Damage *= 3;
+            }
         }
     }
 }

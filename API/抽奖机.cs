@@ -144,5 +144,16 @@ public class 抽奖机 : CustomItem
 
                 throw new InvalidOperationException("抽奖失败，请检查权重配置");
             }
+        //回合重启时清楚资源
+        public static void clear()
+        {
+            foreach(var Lottery in Lotterys)
+            {
+                Lottery.usedPlayers.Clear();
+            }
+            Lotterys.Clear();
+        }
     }
+
+
 }

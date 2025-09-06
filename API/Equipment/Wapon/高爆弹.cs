@@ -29,13 +29,17 @@ namespace CustomItems.API.Equipment.Armor
         {
             if (Wanjia.ComparePlayerFaction(ev.Player, ev.Attacker))
                 return;
-            foreach (Player player in Player.List)
+            if (ev.DamageHandler is FirearmDamageHandler)
             {
-                if (player.IsAlive && Vector3.Distance(player.Position,ev.Player.Position) < 5)
+                foreach (Player player in Player.List)
                 {
-                    player.Damage(new CustomReasonDamageHandler("高爆弹", 10, "高爆弹"));
+                    if (player.IsAlive && Vector3.Distance(player.Position, ev.Player.Position) < 5)
+                    {
+                        player.Damage(new CustomReasonDamageHandler("高爆弹", 10, "高爆弹"));
+                    }
                 }
             }
+
         }
 
 

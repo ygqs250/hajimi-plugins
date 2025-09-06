@@ -9,8 +9,8 @@ using UnityEngine;
 
 namespace CustomItems.Core.Commands;
 
-[CommandHandler(typeof(RemoteAdminCommandHandler))]
-[CommandHandler(typeof(GameConsoleCommandHandler))]
+//[CommandHandler(typeof(RemoteAdminCommandHandler))]
+[CommandHandler(typeof(ClientCommandHandler))]
 internal class PositionCommand : ICommand, IUsageProvider
 {
     public string Command => "position";

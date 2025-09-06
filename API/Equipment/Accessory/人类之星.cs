@@ -1,5 +1,6 @@
 ﻿using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Features.Wrappers;
+using MEC;
 using PlayerStatsSystem;
 using System;
 using System.Collections.Generic;
@@ -29,7 +30,16 @@ namespace CustomItems.API.Equipment.Accessory
             {
                     st.Damage = 0;
             }
+            
 
         }
+        public override void EffectHander(Wanjia wj, System.Object extra = null)
+        {
+            if (Wanjia.SCPCount == 0)
+            {
+                wj.Weapon = null;
+            }
+        }
+
     }
 }

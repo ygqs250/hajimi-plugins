@@ -5,8 +5,10 @@ using LabApi.Features;
 using LabApi.Loader;
 using LabApi.Loader.Features.Plugins;
 using LabApi.Loader.Features.Plugins.Enums;
+using PlayerRoles.FirstPersonControl.NetworkMessages;
 using System;
 using System.ComponentModel;
+using VoiceChat.Networking;
 
 namespace CustomItems;
 
@@ -42,7 +44,6 @@ public class CustomItemsPlugin : Plugin
     public override void Enable()
     {
         Instance = this;
-
         if (_hasIncorrectSettings)
             Log.Error("CustomItems: Incorrect settings in config.yml. Please check the file.");
 

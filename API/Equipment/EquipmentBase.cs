@@ -9,6 +9,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Security.Cryptography;
 using UnityEngine;
 
 namespace CustomItems.API;
@@ -29,6 +30,7 @@ public class EquipmentBase: CustomItem
     public override string Description => "没有用，没有任何效果";
 
     public override ItemType Type => ItemType.Coin;
+
 
     public virtual  void AttactHander(PlayerHurtingEventArgs ev, System.Object extra = null)
     {
@@ -94,6 +96,10 @@ public class EquipmentBase: CustomItem
 
     }
 
+    public virtual void PickupeditemHander(PlayerPickedUpItemEventArgs ev)
+    {
+
+    }
 
 
     public override void OnRegistered()
@@ -202,5 +208,18 @@ public class EquipmentBase: CustomItem
 
     }
 
+    public virtual void shottingHanlde(PlayerShootingWeaponEventArgs ev)
+    {
+       
+    }
 
+    public virtual void shottedHanlde(PlayerShotWeaponEventArgs ev)
+    {
+        
+    }
+
+    public virtual void SelectedItemHander(PlayerChangedItemEventArgs ev)
+    {
+
+    }
 }

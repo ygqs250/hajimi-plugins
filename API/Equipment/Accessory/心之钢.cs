@@ -31,6 +31,8 @@ namespace CustomItems.API.Equipment.Accessory
 
         public override void AttactHander(PlayerHurtingEventArgs ev, System.Object extra = null)
         {
+            if (Wanjia.ComparePlayerFaction(ev.Player, ev.Attacker))
+                return;
             if (ev.DamageHandler is FirearmDamageHandler)
             {
                 StandardDamageHandler st = ev.DamageHandler as FirearmDamageHandler;

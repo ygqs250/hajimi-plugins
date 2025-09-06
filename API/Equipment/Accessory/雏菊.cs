@@ -11,11 +11,11 @@ using UnityEngine.Rendering;
 
 namespace CustomItems.API.Equipment
 {
-    internal class 战地回春 : EquipmentBase
+    internal class 雏菊 : EquipmentBase
     {
         public override EquipmentType EquipType => EquipmentType.Accessory;
 
-        public override string Name => "战地回春";
+        public override string Name => "雏菊";
 
         public override string Description => "使用枪械命中或被枪械命中时，恢复自身附近友军生命值";
 

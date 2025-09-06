@@ -21,14 +21,11 @@ namespace CustomItems.API.Equipment.Armor
         {
             抽奖机.AddLottery(new LotteryItem(this.Id, 1000));
         }
-        public override void OnPickedUp(PlayerPickedUpItemEventArgs ev)
-        {
-            ev.Player.MaxHumeShield = 100;
-        }
 
         public override void EffectHander(Wanjia wj, System.Object extra = null)
         {
-             if(wj.DisengageTimer > 10)
+            wj.Owner.MaxHumeShield = 100;
+            if (wj.DisengageTimer > 10)
             {
                 if(wj.Owner.HumeShield < 100)
                 {

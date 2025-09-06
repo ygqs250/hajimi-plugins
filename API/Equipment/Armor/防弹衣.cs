@@ -26,7 +26,7 @@ namespace CustomItems.API.Equipment.Armor
             if (ev.DamageHandler is FirearmDamageHandler)
             {
                 StandardDamageHandler st = ev.DamageHandler as FirearmDamageHandler;
-                st.Damage = st.Damage * (float)0.6;
+                st.Damage = st.Damage * (float)0.40;
             }
 
         }

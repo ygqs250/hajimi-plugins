@@ -40,7 +40,7 @@ namespace CustomItems.API.Equipment.Armor
 
         private void AddHeath(object sender, DualPlayerEventArgs players)
         {
-            if (players.Player1.Faction == Faction)
+            if (players.Player1.Faction != Faction)
             {
                 onwer.MaxHealth += 8;
                 onwer.Health += 5;

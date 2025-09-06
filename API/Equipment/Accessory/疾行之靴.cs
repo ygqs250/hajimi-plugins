@@ -19,14 +19,13 @@ namespace CustomItems.API.Equipment
 
         public override ItemType Type => ItemType.Coin;
 
-        public int ison = 0;
         public override void OnRegistered()
         {
             抽奖机.AddLottery(new LotteryItem(this.Id, 1000));
         }
         public override void DefendHander(LabApi.Events.Arguments.PlayerEvents.PlayerHurtingEventArgs ev, System.Object extra = null)
         {
-            if(ison == 1 )
+            if (ev.Player.GetEffect<CustomPlayerEffects.Stained>().IsEnabled == true)
             {
                 ev.Player.DisableEffect<CustomPlayerEffects.MovementBoost>();
             }
@@ -34,10 +33,9 @@ namespace CustomItems.API.Equipment
 
         public override void EffectHander(Wanjia wj, System.Object extra = null)
         {
-            if (ison == 0 && wj.DisengageTimer > 6)
+            if (wj.Owner.GetEffect<CustomPlayerEffects.Stained>().IsEnabled == false && wj.DisengageTimer > 6)
             {
-                ison = 1;
-                wj.Owner.EnableEffect< CustomPlayerEffects.MovementBoost>(50,0,false);
+                    wj.Owner.EnableEffect< CustomPlayerEffects.MovementBoost>(50,0,false);
             }
         }
     }

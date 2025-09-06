@@ -13,8 +13,15 @@ public static class ItemRandomizer
     // 配置特定物品的概率（未配置的物品默认权重为1）
     private static readonly Dictionary<ItemType, float> _customWeights = new Dictionary<ItemType, float>
     {
-        { ItemType.GunSCP127, 0f },    // 概率为0
-        { ItemType.MicroHID, 0.5f }, // 50%概率
+        //{ ItemType.GunSCP127, 0f },    // 概率为0
+        { ItemType.MicroHID, 0.2f }, // 50%概率
+        { ItemType.Jailbird, 0.2f }, // 50%概率
+        { ItemType.KeycardCustomTaskForce, 0f },
+        { ItemType.KeycardCustomSite02, 0f }, 
+        { ItemType.KeycardCustomManagement, 0f }, 
+        { ItemType.KeycardCustomMetalCase, 0f }, 
+        { ItemType.DebugRagdollMover, 0f }, 
+        { ItemType.SurfaceAccessPass, 0f }, 
     };
 
     // 静态构造函数：初始化时预计算所有数据

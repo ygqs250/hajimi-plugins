@@ -113,6 +113,7 @@ public static class CustomItems
     {
         return _itemsById.TryGetValue(id, out CustomItem item) ? item : null;
     }
+
     #endregion
 
     #region Spawn / Give

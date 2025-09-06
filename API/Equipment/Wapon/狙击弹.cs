@@ -54,6 +54,15 @@ namespace CustomItems.API.Equipment.Armor
             }
         }
 
+        public override void PickupeditemHander(PlayerPickedUpItemEventArgs ev)
+        {
+
+            if(ev.Item is FirearmItem fire)
+            {
+                fire.StoredAmmo = 0;
+            }    
+        }
+
         public override void EquipHander(Wanjia wj, System.Object extra = null)
         {
             foreach (Item item in wj.Owner.Items)

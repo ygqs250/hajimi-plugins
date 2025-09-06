@@ -34,13 +34,18 @@ using MEC;
 using Interactables.Interobjects.DoorUtils;
 using LabApi.Events.Arguments.WarheadEvents;
 using System.Diagnostics;
+using System.Threading;
+using Timer = System.Timers.Timer;
+using Respawning.Config;
 
 namespace CustomItems.Core;
 
 internal class EventHandler : CustomEventsHandler
 {
-    static Stopwatch stopwatch = new Stopwatch();
+    static Stopwatch stopwatch;
 
+    // 创建定时器（间隔1000毫秒 = 1秒）
+    Timer timer = new Timer(1000);
     private IEnumerator<float> latersetKinematic(Pickup pickup)
     {
         yield return Timing.WaitForSeconds(15f);
@@ -349,7 +354,7 @@ internal class EventHandler : CustomEventsHandler
         if (!Check(ev.UsableItem.Serial)) return;
         API.CustomItems.CurrentItems[ev.UsableItem.Serial].OnUsing(ev);
 
-        if(!Wanjia.Create(ev.Player).CanUseMedical && ev.UsableItem.Category== ItemCategory.Medical)
+        if( ev.UsableItem.Category == ItemCategory.Medical && Wanjia.Create(ev.Player).CanUseMedical>0 )
         {
             ev.IsAllowed = false;
         }
@@ -401,12 +406,17 @@ internal class EventHandler : CustomEventsHandler
     }
     public override void OnPlayerPickedUpItem(PlayerPickedUpItemEventArgs ev)
     {
+        Wanjia wj = Wanjia.Create(ev.Player);
+        wj.PickedUpedItemHander(ev);
         if (!Check(ev.Item.Serial)) return;
         var customItem = API.CustomItems.CurrentItems[ev.Item.Serial];
         customItem.OnPickedUp(ev);
 
         if (!customItem.ShowItemHints || !customItem.ShowPickupHints) return;
-        ev.Player.SendHint($"装备名称:{customItem.Name}\n效果:{customItem.Description}");
+        //ev.Player.SendHint($"装备名称:{customItem.Name}\n效果:{customItem.Description}");
+        //wj.hintUIManager.SetEquipmentPickup(customItem);
+        //ev.Player.SendBroadcast($"你捡起来了{customItem.Name}",5);
+
         //NetworkServer.UnSpawn(ev.Item.GameObject);
         //ev.Item.GameObject.transform.localScale = Vector3.one * 200;
         //NetworkServer.Spawn(ev.Item.GameObject);
@@ -416,7 +426,6 @@ internal class EventHandler : CustomEventsHandler
     #region Item Selection
     public override void OnPlayerChangingItem(PlayerChangingItemEventArgs ev)
     {
-
         if (ev.OldItem != null && !ev.OldItem.IsDestroyed && ev.OldItem.GameObject != null && Check(ev.OldItem.Serial))
         {
             API.CustomItems.CurrentItems[ev.OldItem.Serial].OnUnselecting(ev);
@@ -427,6 +436,8 @@ internal class EventHandler : CustomEventsHandler
     }
     public override void OnPlayerChangedItem(PlayerChangedItemEventArgs ev)
     {
+        Wanjia wj = Wanjia.Create(ev.Player);
+        wj.SelectedItemHander(ev);
         if (ev.OldItem != null && !ev.OldItem.IsDestroyed && Check(ev.OldItem.Serial))
         {
             API.CustomItems.CurrentItems[ev.OldItem.Serial].OnUnselected(ev);
@@ -435,7 +446,9 @@ internal class EventHandler : CustomEventsHandler
         var customItem = API.CustomItems.CurrentItems[ev.NewItem.Serial];
         customItem.OnSelected(ev);
         if (!customItem.ShowItemHints || !customItem.ShowSelectedHints) return;
-        ev.Player.SendHint($"你选中了 {customItem.Name}\n装备效果:{customItem.Description}");
+        //ev.Player.SendHint($"你选中了{customItem.Type}: {customItem.Name}\n装备效果:{customItem.Description}",8);
+        
+        wj.hintUIManager.SetEquipmentPickup(customItem);
     }
     #endregion
 
@@ -461,11 +474,19 @@ internal class EventHandler : CustomEventsHandler
         Log.Info("玩家移除成功：" + ev.Player.Nickname);
     }
 
+    static ChaosSpawnWave chaosWave;
+
+    public override void OnServerRoundRestarted()
+    {
+        timer.Elapsed -= OnTimerElapsed;
+        抽奖机.clear();
+    }
+
+
     public override void OnServerRoundStarting(RoundStartingEventArgs ev)
     {
-        stopwatch.Start();
-        // 创建定时器（间隔1000毫秒 = 1秒）
-        Timer timer = new Timer(1000);
+        //stopwatch.Start();
+        stopwatch = Stopwatch.StartNew();
 
         // 绑定定时器事件
         timer.Elapsed += OnTimerElapsed;
@@ -484,17 +505,36 @@ internal class EventHandler : CustomEventsHandler
             {
                 timeBasedWave.Timer.DefaultSpawnInterval = 120;
                 timeBasedWave.Timer.SpawnIntervalSeconds = 120;
+                timeBasedWave.RespawnTokens = 99;
+                if (timeBasedWave.Configuration is PrimaryWaveConfig<NtfSpawnWave> primaryWaveConfig)
+                {
+                    primaryWaveConfig.SizePercentage = 1;
+                }
+               
             }
-            else if(wave is ChaosSpawnWave chaosSpawnWave)
-            {
+            else if (wave is ChaosSpawnWave chaosSpawnWave) {
+                chaosWave = chaosSpawnWave;
                 chaosSpawnWave.Timer.DefaultSpawnInterval = 120;
                 chaosSpawnWave.Timer.SpawnIntervalSeconds = 120;
+                chaosSpawnWave.RespawnTokens = 99;
+                if (chaosSpawnWave.Configuration is PrimaryWaveConfig<NtfSpawnWave> primaryWaveConfig)
+                {
+                    primaryWaveConfig.SizePercentage = 1;
+                }
             } else if(wave is TimeBasedWave timeBasedWave1)
             {
-                timeBasedWave1.Timer.DefaultSpawnInterval = 999;
-                timeBasedWave1.Timer.SpawnIntervalSeconds = 999;
+                timeBasedWave1.Timer.DefaultSpawnInterval = 9999;
+                timeBasedWave1.Timer.SpawnIntervalSeconds = 9999;
             }
         }
+
+        Server.CategoryLimits[ItemCategory.SpecialWeapon] = 8;
+        Server.CategoryLimits[ItemCategory.Keycard] = 8;
+        Server.CategoryLimits[ItemCategory.Firearm] = 8;
+        Server.CategoryLimits[ItemCategory.Radio] = 8;
+        Server.CategoryLimits[ItemCategory.Medical] = 8;
+        Server.CategoryLimits[ItemCategory.Grenade] = 8;
+        Server.CategoryLimits[ItemCategory.SCPItem] = 8;
     }
 
 
@@ -504,11 +544,18 @@ internal class EventHandler : CustomEventsHandler
         TimeSpan elapsed = stopwatch.Elapsed;
         Server.PlayerListName = $"<size=300%><align=\"center\"><color=red>哈基米服务器1服 QQ群:913477784</color> \\n <size=150%><align=\"center\"><color=blue>开局时间：{elapsed.Hours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}</color>";
         List<Player> players = Player.ReadyList.ToList<Player>();
+
         for (int i = 0; i < players.Count; i++)
         {
+            Wanjia wj = Wanjia.Get(players[i]);
+            wj.hintUIManager.UpdateHint();
             if (players[i].IsAlive)
             {
-                Wanjia wj = Wanjia.Get(players[i]);
+                if(wj.SpawnProtectedTime > 0)
+                {
+                    wj.SpawnProtectedTime--;
+                }
+                
                 players[i].DisplayName = Wanjia.DisplayName(wj);
                 wj.SufferTimer++;
                 wj.DisengageTimer++;
@@ -517,9 +564,12 @@ internal class EventHandler : CustomEventsHandler
                 wj?.Armor?.EffectHander(wj);
                 wj?.Accessory?.EffectHander(wj);
 
+                Wanjia.SCPCount = 0;
+
                 if (players[i].IsSCP)
                 {
-                    if(wj.lastPostion == players[i].Position)
+                    Wanjia.SCPCount++;
+                    if (wj.lastPostion == players[i].Position)
                     {
                         wj.moveTimer++;
                     }
@@ -527,7 +577,7 @@ internal class EventHandler : CustomEventsHandler
                     {
                         wj.moveTimer  = 0;
                     }
-                    if (wj.moveTimer > 10)
+                    if (wj.moveTimer > 10 && wj.DisengageTimer > 10)
                     {
                         float healthstatus = players[i].Health / players[i].MaxHealth;
                         healthstatus *= 5;
@@ -559,14 +609,41 @@ internal class EventHandler : CustomEventsHandler
                 }
             }
 
+            if(Player.Count < 15)
+            {
+                if(chaosWave != null)
+                chaosWave.RespawnTokens = 0;
+            }else
+            {
+                if (chaosWave != null)
+                    chaosWave.RespawnTokens = 99;
+            }
+
         }
 
-        List<WaveTimer> waves = WaveSetting.getRimeBasedWave();
+
+        if(elapsed.TotalSeconds % 360 == 0)
+        {
+            Timing.RunCoroutine(ClearPickup());
+            foreach (var player in Player.ReadyList.ToList<Player>())
+            {
+                player.SendBroadcast("10秒后清理物品",10);
+                Server.SendBroadcast("10秒后清理物品", 10, shouldClearPrevious: true);
+            }
+        }
+
+        //List<WaveTimer> waves = WaveSetting.getRimeBasedWave();
         //foreach (WaveTimer wave in waves)
         //{
         //    Log.Info(wave.ToString()+":"+ wave.DefaultSpawnInterval+":" + wave.SpawnIntervalSeconds + ":"+wave.TimePassed);
         //}
         //Log.Info("循环执行了一次");
+    }
+
+    static private IEnumerator<float> ClearPickup()
+    {
+        yield return Timing.WaitForSeconds(10f);
+        Maid.clean();
     }
 
     public override void OnPlayerHurting(PlayerHurtingEventArgs ev)
@@ -575,7 +652,7 @@ internal class EventHandler : CustomEventsHandler
         {
             if(scp049.DamageSubType == Scp049DamageHandler.AttackType.CardiacArrest)
             {
-                Wanjia.ClearEquip(ev.Player);
+                Wanjia.ClearEquipment(ev.Player);
                 ev.Player.SetRole(PlayerRoles.RoleTypeId.Scp0492);
                 return;
             }
@@ -605,15 +682,31 @@ internal class EventHandler : CustomEventsHandler
         if (ev.Attacker != null)
         {
             Wanjia attacter = Wanjia.Create(ev?.Attacker);
-            attacter.AttactTimer = 0;
-            attacter.DisengageTimer = 0;
+            if (!Wanjia.ComparePlayerFaction(ev.Player, ev.Attacker))
+            {
+                attacter.AttactTimer = 0;
+                attacter.DisengageTimer = 0;
+            }
+
             attacter.attack(ev);
         }
         if (ev.Player != null)
         {
             Wanjia suffer = Wanjia.Create(ev?.Player);
-            suffer.SufferTimer = 0;
-            suffer.DisengageTimer = 0;
+            //出生保护
+            if(suffer.SpawnProtectedTime > 0)
+            {
+                if(ev.DamageHandler is StandardDamageHandler standardDamageHandler)
+                {
+                    standardDamageHandler.Damage = 0;
+                }
+            }
+
+            if (!Wanjia.ComparePlayerFaction(ev.Player, ev.Attacker))
+            {
+                suffer.SufferTimer = 0;
+                suffer.DisengageTimer = 0;
+            }
             suffer.defend(ev);
         }
     }
@@ -632,16 +725,41 @@ internal class EventHandler : CustomEventsHandler
             Wanjia suffer = Wanjia.Create(ev?.Player);
             suffer.SufferTimer = 0;
             suffer.defenddying( ev);
+            //suffer.deathposition = ev.Player.Position;
+        }
+        //TimedGrenadeProjectile.SpawnActive(ev.Player.Position, ItemType.GrenadeHE, ev.Player);
+        
+    }
+
+    public override void OnPlayerShootingWeapon(PlayerShootingWeaponEventArgs ev)
+    {
+        if (ev.Player != null)
+        {
+            Wanjia suffer = Wanjia.Create(ev?.Player);
+            suffer.shottingHanlde(ev);
+        }
+    }
+
+    public override void OnPlayerShotWeapon(PlayerShotWeaponEventArgs ev)
+    {
+        if (ev.Player != null)
+        {
+            Wanjia suffer = Wanjia.Create(ev?.Player);
+            suffer.shottedHanlde(ev);
         }
     }
 
     public override void OnPlayerReloadingWeapon(PlayerReloadingWeaponEventArgs ev)
     {
+        if(ev.FirearmItem is Scp127Firearm)
+            return;
         ev.Player.SetAmmo(ev.FirearmItem.AmmoType, 1000);
     }
 
     public override void OnPlayerReloadedWeapon(PlayerReloadedWeaponEventArgs ev)
     {
+        if (ev.FirearmItem is Scp127Firearm)
+            return;
         Wanjia wj = Wanjia.Create(ev.Player);
         wj.ReloadFireArm(ev);
     }
@@ -680,68 +798,11 @@ internal class EventHandler : CustomEventsHandler
                     break;
             }
         }
+
     }
     public override void OnPlayerChangedRole(PlayerChangedRoleEventArgs ev)
     {
-        if (ev.Player.IsSCP)
-        {
-            switch (ev.Player.Role)
-            {
-                case (RoleTypeId.Scp173):
-                    ev.Player.MaxHealth = 7173;
-                    ev.Player.Health = 7173;
-                    break;
-                case (RoleTypeId.Scp049):
-                    ev.Player.MaxHealth = 4449;
-                    ev.Player.Health = 4449;
-                    break;
-                case (RoleTypeId.Scp939):
-                    ev.Player.MaxHealth = 4939;
-                    ev.Player.Health = 4939;
-                    break;
-                case (RoleTypeId.Scp106):
-                    ev.Player.MaxHealth = 5106;
-                    ev.Player.Health = 5109;
-                    break;
-                case (RoleTypeId.Scp096):
-                    ev.Player.MaxHealth = 5096;
-                    ev.Player.Health = 5096;
-                    break;
-                //case (RoleTypeId.Scp079):
-                //    ev.Player.SetRole(RoleTypeId.Scp106);
-                //int ran = Wanjia.rand.Next(0, 5);
-                //switch (ran)
-                //{
-                //    case (0):
-                //        ev.Player.SetRole(RoleTypeId.Scp049);
-                //        break;
-                //    case (1):
-                //        ev.Player.SetRole(RoleTypeId.Scp939);
-                //        break;
-                //    case (2):
-                //        ev.Player.SetRole(RoleTypeId.Scp096);
-                //        break;
-                //    case (3):
-                //        ev.Player.SetRole(RoleTypeId.Scp049);
-                //        break;
-                //    case (4):
-                //        ev.Player.SetRole(RoleTypeId.Scp106);
-                //        break;
-                //    default:
-                //        break;
-                //}
-
-                //break;
-                default:
-                    break;
-            }
-        }
-
-        ev.Player.SetAmmo(ItemType.Ammo12gauge, 1000);
-            ev.Player.SetAmmo(ItemType.Ammo44cal, 1000);
-            ev.Player.SetAmmo(ItemType.Ammo9x19, 1000);
-            ev.Player.SetAmmo(ItemType.Ammo762x39, 1000);
-            ev.Player.SetAmmo(ItemType.Ammo556x45, 1000);
+        Wanjia wj = Wanjia.Create(ev.Player);
 
         if (ev.Player.Faction == Faction.FoundationStaff || ev.Player.Faction == Faction.FoundationEnemy)
         {
@@ -753,6 +814,105 @@ internal class EventHandler : CustomEventsHandler
             //StartCoroutine();
             Timing.RunCoroutine(GiveItemsAfterDelay(ev.Player));
         }
+
+        if (ev.ChangeReason == RoleChangeReason.RemoteAdmin || ev.ChangeReason == RoleChangeReason.RespawnMiniwave)
+        {
+            wj.ClearEquipment();
+        }
+
+        switch (ev.Player.Role)
+        {
+            case RoleTypeId.None:
+                break;
+            case RoleTypeId.Scp173:
+                ev.Player.MaxHealth = 7173;
+                ev.Player.Health = 7173;
+                Wanjia.Create(ev.Player).Accessory = new API.Equipment.花生之怒();
+                Wanjia.Create(ev.Player).Armor = new API.Equipment.皮糙肉厚();
+                break;
+            case RoleTypeId.ClassD:
+                break;
+            case RoleTypeId.Spectator:
+                break;
+            case RoleTypeId.Scp106:
+                ev.Player.MaxHealth = 5106;
+                ev.Player.Health = 5109;
+                Wanjia.Create(ev.Player).Accessory = new API.Equipment.神奇口袋();
+                Wanjia.Create(ev.Player).Armor = new API.Equipment.皮糙肉厚();
+                break;
+            case RoleTypeId.NtfSpecialist:
+                break;
+            case RoleTypeId.Scp049:
+                ev.Player.MaxHealth = 4449;
+                ev.Player.Health = 4449;
+                Wanjia.Create(ev.Player).Accessory = new API.Equipment.感染手套();
+                Wanjia.Create(ev.Player).Armor = new API.Equipment.皮糙肉厚();
+                break;
+            case RoleTypeId.Scientist:
+                break;
+            case RoleTypeId.Scp079:
+                break;
+            case RoleTypeId.ChaosConscript:
+                break;
+            case RoleTypeId.Scp096:
+                ev.Player.MaxHealth = 5096;
+                ev.Player.Health = 5096;
+                Wanjia.Create(ev.Player).Accessory = new API.Equipment.痛肘();
+                Wanjia.Create(ev.Player).Armor = new API.Equipment.皮糙肉厚();
+                break;
+            case RoleTypeId.Scp0492:
+                Wanjia.Create(ev.Player).Accessory = new API.Equipment.隐形的翅膀();
+                break;
+            case RoleTypeId.NtfSergeant:
+                break;
+            case RoleTypeId.NtfCaptain:
+                break;
+            case RoleTypeId.NtfPrivate:
+                break;
+            case RoleTypeId.Tutorial:
+                break;
+            case RoleTypeId.FacilityGuard:
+                break;
+            case RoleTypeId.Scp939:
+                ev.Player.MaxHealth = 4939;
+                ev.Player.Health = 4939;
+                Wanjia.Create(ev.Player).Armor = new API.Equipment.皮糙肉厚();
+                break;
+            case RoleTypeId.CustomRole:
+                break;
+            case RoleTypeId.ChaosRifleman:
+                break;
+            case RoleTypeId.ChaosMarauder:
+                break;
+            case RoleTypeId.ChaosRepressor:
+                break;
+            case RoleTypeId.Overwatch:
+                break;
+            case RoleTypeId.Filmmaker:
+                break;
+            case RoleTypeId.Scp3114:
+                break;
+            case RoleTypeId.Destroyed:
+                break;
+            case RoleTypeId.Flamingo:
+                break;
+            case RoleTypeId.AlphaFlamingo:
+                break;
+            case RoleTypeId.ZombieFlamingo:
+                break;
+            default:
+                break;
+        }
+
+
+
+        ev.Player.SetAmmo(ItemType.Ammo12gauge, 1000);
+            ev.Player.SetAmmo(ItemType.Ammo44cal, 1000);
+            ev.Player.SetAmmo(ItemType.Ammo9x19, 1000);
+            ev.Player.SetAmmo(ItemType.Ammo762x39, 1000);
+            ev.Player.SetAmmo(ItemType.Ammo556x45, 1000);
+
+
     }
 
     // 定义协程方法
@@ -803,14 +963,14 @@ internal class EventHandler : CustomEventsHandler
                         case (1):
                             for (int i = 0; i < 7; i++)
                             {
-                                player.AddItem(ItemType.GrenadeHE);
+                                player.AddItem(ItemType.MicroHID);
                             }
                             player.AddItem(ItemType.GunCrossvec);
                             break;
                         default:
                             for (int i = 0; i < 7; i++)
                             {
-                                player.AddItem(ItemType.GrenadeHE);
+                                player.AddItem(ItemType.MicroHID);
                             }
                             player.AddItem(ItemType.GunCrossvec);
                             break;
@@ -859,7 +1019,7 @@ internal class EventHandler : CustomEventsHandler
             suffer.SufferTimer = 0;
             suffer.DisengageTimer = 0;
             suffer.defenddeath(ev);
-            suffer.ClearEquip();
+            suffer.ClearEquipment();
             抽奖机.Lotterysclear(ev.Player);
         }
         
@@ -898,12 +1058,13 @@ internal class EventHandler : CustomEventsHandler
     //}
     public override void OnServerWaveRespawned(WaveRespawnedEventArgs ev)
     {
-        ev.Wave.RespawnTokens = 99;
-        ev.Wave.Base.Timer.SpawnIntervalSeconds -= 20;
+        //ev.Wave.RespawnTokens = 99;
+        //ev.Wave.Base.Timer.SpawnIntervalSeconds -= 20;
 
         foreach (Player player in ev.Players) 
         {
-            player.EnableEffect<CustomPlayerEffects.SpawnProtected>(1, 40f, false);
+            //player.EnableEffect<CustomPlayerEffects.SpawnProtected>(1, 40f, false);
+            Wanjia.Create(player).SpawnProtectedTime = 40;
         }
     }
 
@@ -987,5 +1148,79 @@ internal class EventHandler : CustomEventsHandler
         //{
         //    PlayerRoles.In
         //}
+    }
+
+
+    public override void OnPlayerValidatedVisibility(PlayerValidatedVisibilityEventArgs ev)
+    {
+
+        if (ev.Target.Role == RoleTypeId.Scp0492 && ev.Player.IsHuman)
+        {
+            if (Wanjia.Create(ev.Target).DisengageTimer > 10)
+            {
+                if(Vector3.Distance(ev.Target.Position, ev.Player.Position) > 3)
+                {
+                    ev.IsVisible = false;
+                }
+            }
+            else
+            {
+                if (Vector3.Distance(ev.Target.Position, ev.Player.Position) > 3)
+                {
+                    ev.IsVisible = false;
+                }
+            }
+
+           
+        }
+    }
+
+    public override void OnPlayerLeftPocketDimension(PlayerLeftPocketDimensionEventArgs ev)
+    {
+        int ran = Wanjia.rand.Next(0, 100);
+        if (ran < 20)
+        {
+            ev.Player.SendBroadcast("老头口袋随机效果，你没了装备", 15);
+            Wanjia.Create(ev.Player).ClearEquipment();
+            return;
+        }
+        if(ran<40)
+        {
+            ev.Player.SendBroadcast("老头口袋随机效果，你得了近视", 15);
+            ev.Player.EnableEffect<FogControl>(5);
+            return;
+        }
+        if (ran < 60)
+        {
+            ev.Player.SetRole(RoleTypeId.Scp0492);
+            ev.Player.SendBroadcast("老头口袋随机效果，所以你变成了小僵尸", 15);
+            return;
+        }
+        if(ran < 80)
+        {
+            ev.Player.SendBroadcast("老头口袋随机效果，你变成了敌对阵营", 15);
+            if (ev.Player.IsChaos)
+            {
+                ev.Player.SetRole(RoleTypeId.NtfSpecialist);
+            }
+            else
+            {
+                ev.Player.SetRole(RoleTypeId.ChaosRifleman);
+            }
+            return;
+        }
+        if(ran < 99)
+        {
+            ev.Player.SendBroadcast("老头口袋随机效果，你没了物品", 15);
+            ev.Player.ClearItems();
+            return;
+        }
+        if (ran < 100)
+        {
+            ev.Player.SendBroadcast("老头口袋随机效果，你变成了SCP106", 15);
+            ev.Player.SetRole(RoleTypeId.Scp106);
+            return;
+        }
+
     }
 }

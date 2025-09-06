@@ -26,18 +26,16 @@ namespace CustomItems.API.Equipment.Armor
         public override void AttactHander(PlayerHurtingEventArgs ev, System.Object extra = null)
         {
             if (ev.Attacker == null) return;
-            if (ev.DamageHandler is StandardDamageHandler)
+            if (ev.DamageHandler is StandardDamageHandler st)
             {
-                StandardDamageHandler st = ev.DamageHandler as StandardDamageHandler;
                 st.Damage *= 2;
             }
         }
 
         public override void DefendHander(PlayerHurtingEventArgs ev, System.Object extra = null)
         {
-            if (ev.DamageHandler is FirearmDamageHandler)
+            if (ev.DamageHandler is StandardDamageHandler st)
             {
-                StandardDamageHandler st = ev.DamageHandler as FirearmDamageHandler;
                 st.Damage = st.Damage * 2;
             }
 

@@ -1,5 +1,6 @@
 ﻿using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Features.Wrappers;
+using MEC;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,8 +20,7 @@ namespace CustomItems.API.Equipment.Accessory
         public override ItemType Type => ItemType.Coin;
         public override void KillHander(PlayerDeathEventArgs ev)
         {
-            ev.Player.SetRole(ev.Attacker.Role);
-            ev.Player.Position = ev.Attacker.Position;
+            Timing.RunCoroutine(changeRoleAfterDelay(ev.Player,ev.Attacker));
         }
         public override void OnRegistered()
         {
@@ -35,6 +35,13 @@ namespace CustomItems.API.Equipment.Accessory
                     firearmItem.StoredAmmo = 0;
                 }
             }
+        }
+
+        private IEnumerator<float> changeRoleAfterDelay(Player player, Player attater)
+        {
+            yield return Timing.WaitForSeconds(0.5f);
+            player.SetRole(attater.Role);
+            player.Position = attater.Position;
         }
     }
 }
